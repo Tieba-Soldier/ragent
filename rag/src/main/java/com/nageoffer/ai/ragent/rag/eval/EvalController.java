@@ -65,9 +65,20 @@ public class EvalController {
 
         RewriteResult rewriteResult = queryRewriteService.rewriteWithSplit(question, List.of());
         List<SubQuestionIntent> subIntents = intentResolver.resolve(rewriteResult);
-        RetrievalContext rc = retrievalEngine.retrieve(subIntents);
+        // 与正式聊天链路保持一致：明确的纯 SYSTEM 请求不进入检索。
+        // 仍返回意图结果，便于评测路由准确率和过度检索率。
+        RetrievalContext rc = intentResolver.areAllSystemOnly(subIntents)
+                ? emptyRetrievalContext()
+                : retrievalEngine.retrieve(subIntents);
 
         return Results.success(buildResponse(rc, subIntents, System.currentTimeMillis() - start));
+    }
+
+    private RetrievalContext emptyRetrievalContext() {
+        return RetrievalContext.builder()
+                .intentChunks(Map.of())
+                .eligibleIntentIds(Set.of())
+                .build();
     }
 
     private EvalResponse buildResponse(RetrievalContext rc, List<SubQuestionIntent> subIntents, long latencyMs) {

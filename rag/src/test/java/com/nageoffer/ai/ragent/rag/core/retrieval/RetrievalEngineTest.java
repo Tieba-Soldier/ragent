@@ -29,6 +29,7 @@ import com.nageoffer.ai.ragent.rag.core.prompt.DefaultContextFormatter;
 import com.nageoffer.ai.ragent.rag.core.prompt.PromptTemplateLoader;
 import com.nageoffer.ai.ragent.rag.dto.RetrievalContext;
 import com.nageoffer.ai.ragent.rag.dto.SubQuestionIntent;
+import com.nageoffer.ai.ragent.rag.enums.IntentKind;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.DefaultResourceLoader;
 
@@ -44,10 +45,39 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RetrievalEngineTest {
+
+    @Test
+    void systemOnlyIntentSkipsKnowledgeRetrieval() {
+        MultiChannelRetrievalEngine multiChannel = mock(MultiChannelRetrievalEngine.class);
+        ContextFormatter contextFormatter = mock(ContextFormatter.class);
+
+        RetrievalContext result = engine(multiChannel, contextFormatter).retrieve(List.of(
+                new SubQuestionIntent("你好", List.of(systemIntent("sys-welcome")))
+        ));
+
+        assertTrue(result.isEmpty());
+        assertTrue(result.getIntentChunks().isEmpty());
+        verifyNoInteractions(multiChannel, contextFormatter);
+    }
+
+    @Test
+    void emptyIntentSkipsKnowledgeRetrieval() {
+        MultiChannelRetrievalEngine multiChannel = mock(MultiChannelRetrievalEngine.class);
+        ContextFormatter contextFormatter = mock(ContextFormatter.class);
+
+        RetrievalContext result = engine(multiChannel, contextFormatter).retrieve(List.of(
+                new SubQuestionIntent("范围外问题", List.of())
+        ));
+
+        assertTrue(result.isEmpty());
+        assertTrue(result.getIntentChunks().isEmpty());
+        verifyNoInteractions(multiChannel, contextFormatter);
+    }
 
     @Test
     void returnsOnlyActualIntentMatchesAndIndependentGlobalEvidence() {
@@ -202,6 +232,13 @@ class RetrievalEngineTest {
         return NodeScore.builder()
                 .node(IntentNode.builder().id(id).promptSnippet(snippet).build())
                 .score(0.5)
+                .build();
+    }
+
+    private NodeScore systemIntent(String id) {
+        return NodeScore.builder()
+                .node(IntentNode.builder().id(id).kind(IntentKind.SYSTEM).build())
+                .score(0.9)
                 .build();
     }
 

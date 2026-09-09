@@ -41,6 +41,9 @@ scripts/logs/
 node_modules/
 dist/
 .vite/
+.env
+.env.*
+!.env.example
 .env.local
 resources/docker/graphrag/.env
 

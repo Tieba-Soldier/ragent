@@ -135,9 +135,7 @@ public class StreamChatPipeline {
 
     private boolean handleSystemOnly(StreamChatContext ctx) {
         List<SubQuestionIntent> subIntents = ctx.getSubIntents();
-        boolean allSystemOnly = subIntents.stream()
-                .allMatch(si -> intentResolver.isSystemOnly(si.nodeScores()));
-        if (!allSystemOnly) {
+        if (!intentResolver.areAllSystemOnly(subIntents)) {
             return false;
         }
         String customPrompt = subIntents.stream()

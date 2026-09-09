@@ -88,6 +88,15 @@ public class IntentResolver {
                 && nodeScores.get(0).getNode().getKind() == SYSTEM;
     }
 
+    /**
+     * 所有子问题都明确且仅命中 SYSTEM 意图时，整轮可直接走系统应答。
+     * 空列表不能利用 Stream#allMatch 的真空真值被误判成 SYSTEM_ONLY。
+     */
+    public boolean areAllSystemOnly(List<SubQuestionIntent> subIntents) {
+        return CollUtil.isNotEmpty(subIntents)
+                && subIntents.stream().allMatch(si -> isSystemOnly(si.nodeScores()));
+    }
+
     private List<NodeScore> classifyIntents(String question) {
         List<NodeScore> scores = intentClassifier.classifyTargets(question);
         return scores.stream()

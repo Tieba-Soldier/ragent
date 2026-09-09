@@ -171,7 +171,12 @@ public class RetrievalEngine {
         List<NodeScore> kbIntents = NodeScoreFilters.kb(intent.nodeScores());
         List<NodeScore> mcpIntents = NodeScoreFilters.mcp(intent.nodeScores());
 
-        KbResult kbResult = retrieveAndRerank(intent, kbIntents, budget);
+        // SYSTEM / MCP-only / 空意图都没有 KB 语义，不能退化成全库检索。
+        // 低置信 KB 候选仍会进入 retrieveAndRerank，并由 RetrievalScopeResolver
+        // 决定是否使用全局作用域，因此不会削弱原有的 KB 低置信兜底。
+        KbResult kbResult = CollUtil.isEmpty(kbIntents)
+                ? new KbResult("", Map.of(), Set.of())
+                : retrieveAndRerank(intent, kbIntents, budget);
 
         String mcpContext = CollUtil.isNotEmpty(mcpIntents)
                 ? executeMcpAndMerge(intent.subQuestion(), mcpIntents)

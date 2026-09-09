@@ -101,7 +101,7 @@ class StreamChatPipelineTest {
         when(queryRewriteService.rewriteWithSplit("原问题", List.of())).thenReturn(rewriteResult);
         when(intentResolver.resolve(rewriteResult)).thenReturn(subIntents);
         when(guidanceService.detectAmbiguity("改写问题", subIntents)).thenReturn(GuidanceDecision.none());
-        when(intentResolver.isSystemOnly(anyList())).thenReturn(false);
+        when(intentResolver.areAllSystemOnly(subIntents)).thenReturn(false);
         when(retrievalEngine.retrieve(subIntents)).thenReturn(retrievalContext);
         when(intentResolver.mergeIntentGroup(subIntents)).thenReturn(new IntentGroup(List.of(), List.of()));
         when(citationContextEnricher.enrich("<content>资料</content>", List.of()))
