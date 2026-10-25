@@ -4,9 +4,20 @@ export function normalizeType(sourceType?: string) {
   return (sourceType || "").toLowerCase();
 }
 
+// 只把 HTTP(S) 地址视为外链，避免来源数据中的其他协议被浏览器执行
+function externalUrl(source: SourceRef): URL | null {
+  if (!source.url) return null;
+  try {
+    const url = new URL(source.url);
+    return url.protocol === "http:" || url.protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 // 有外部链接的来源（url/飞书等）走 favicon 与新窗口跳转 本地文件走 docId 预览
 export function isExternal(source: SourceRef) {
-  return Boolean(source.url);
+  return externalUrl(source) !== null;
 }
 
 // 从 fileType 取扩展名 缺失时回退按 docName 扩展名兜底（兼容无 fileType 的历史数据）
@@ -19,13 +30,10 @@ export function fileExt(source: SourceRef): string {
 // 来源基础文案：飞书文档 / 网页域名 / 本地文件
 export function sourceLabel(source: SourceRef) {
   const type = normalizeType(source.sourceType);
-  if (isExternal(source)) {
+  const url = externalUrl(source);
+  if (url) {
     if (type === "feishu") return "飞书文档";
-    try {
-      return new URL(source.url as string).hostname;
-    } catch {
-      return "网页";
-    }
+    return url.hostname;
   }
   return "本地文件";
 }
@@ -40,11 +48,18 @@ export function sourceSite(source: SourceRef) {
 
 // 打开来源：外链新窗口跳原站 本地文件走 docId 预览页
 export function openSource(source: SourceRef) {
-  if (isExternal(source) && source.url) {
-    window.open(source.url, "_blank", "noopener,noreferrer");
+  const url = externalUrl(source);
+  if (url) {
+    window.open(url.href, "_blank", "noopener,noreferrer");
     return;
   }
-  window.open(`/preview/doc/${source.docId}`, "_blank", "noopener,noreferrer");
+  if (source.docId) {
+    window.open(
+      `/preview/doc/${encodeURIComponent(source.docId)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
 }
 
 // 网页标题里常见的章节标记 如 ^第8章^
