@@ -225,7 +225,7 @@ public class YouComSearchMcpExecutor {
     }
 
     /**
-     * 摘录优先取 description，缺失时回退第一条 snippet
+     * 摘录优先取 description，缺失时回退第一条非空 snippet
      */
     private String resolveExcerpt(JsonNode item) {
         String description = item.path("description").asText("");
@@ -233,8 +233,13 @@ public class YouComSearchMcpExecutor {
             return description;
         }
         JsonNode snippets = item.path("snippets");
-        if (snippets.isArray() && !snippets.isEmpty()) {
-            return snippets.get(0).asText("");
+        if (snippets.isArray()) {
+            for (JsonNode snippet : snippets) {
+                String text = snippet.asText("");
+                if (!text.isBlank()) {
+                    return text;
+                }
+            }
         }
         return "";
     }
