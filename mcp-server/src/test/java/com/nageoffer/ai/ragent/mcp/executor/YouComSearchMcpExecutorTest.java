@@ -166,6 +166,19 @@ class YouComSearchMcpExecutorTest {
     }
 
     @Test
+    @DisplayName("description 缺失且首条 snippet 为空时使用后续非空摘录")
+    void skipsBlankSnippets() {
+        responseBody = """
+                {"results":{"web":[{"title":"网页结果","snippets":["", "有效摘录"]}]}}
+                """;
+
+        CallToolResult result = executor("test-key").handleCall(request(Map.of("query", "test")));
+
+        assertFalse(result.isError());
+        assertTrue(text(result).contains("摘录: 有效摘录"));
+    }
+
+    @Test
     @DisplayName("count 参数：超过上限截断为 20，非法值回退默认 5")
     void countDefaultAndCap() {
         executor("k").handleCall(request(Map.of("query", "t", "count", 50)));
