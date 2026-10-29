@@ -7,6 +7,7 @@ function parseCsv(text: string): string[][] {
   let row: string[] = [];
   let field = "";
   let inQuotes = false;
+  let fieldStarted = false;
 
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
@@ -25,9 +26,11 @@ function parseCsv(text: string): string[][] {
     }
     if (ch === '"') {
       inQuotes = true;
+      fieldStarted = true;
     } else if (ch === ",") {
       row.push(field);
       field = "";
+      fieldStarted = false;
     } else if (ch === "\n" || ch === "\r") {
       // 吃掉 \r\n 中的 \n，避免空行
       if (ch === "\r" && text[i + 1] === "\n") {
@@ -37,12 +40,14 @@ function parseCsv(text: string): string[][] {
       rows.push(row);
       row = [];
       field = "";
+      fieldStarted = false;
     } else {
       field += ch;
+      fieldStarted = true;
     }
   }
   // 收尾最后一个字段/行(无末尾换行时)
-  if (field.length > 0 || row.length > 0) {
+  if (fieldStarted || row.length > 0) {
     row.push(field);
     rows.push(row);
   }
@@ -50,9 +55,7 @@ function parseCsv(text: string): string[][] {
 }
 
 function escapeCell(cell: string): string {
-  return (cell ?? "")
-    .replace(/\|/g, "\\|")
-    .replace(/\r\n|\r|\n/g, "<br>");
+  return (cell ?? "").replace(/\|/g, "\\|").replace(/\r\n|\r|\n/g, "<br>");
 }
 
 function buildRow(cells: string[], width: number): string {
