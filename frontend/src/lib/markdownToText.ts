@@ -5,8 +5,21 @@
 export function markdownToPlainText(markdown: string): string {
   if (!markdown) return "";
 
+  // 先隔离代码内容，避免后续的表格和行内 Markdown 规则改写代码本身。
+  let marker = "\uE000";
+  while (markdown.includes(marker)) marker += "\uE000";
+  const codeSegments: string[] = [];
+  const protectCode = (code: string): string => {
+    const token = `${marker}${codeSegments.length}\uE001`;
+    codeSegments.push(code);
+    return token;
+  };
+
   // 1. 代码围栏 ```lang\n...\n``` → 仅保留代码内容
-  let text = markdown.replace(/```[^\n]*\n([\s\S]*?)```/g, (_, code: string) => code);
+  let text = markdown.replace(/```[^\n]*\n([\s\S]*?)```/g, (_, code: string) =>
+    protectCode(code.replace(/\r?\n$/, ""))
+  );
+  text = text.replace(/`([^`]+)`/g, (_, code: string) => protectCode(code));
 
   // 2. 逐行处理块级标记
   const lines = text.split("\n");
@@ -37,11 +50,14 @@ export function markdownToPlainText(markdown: string): string {
   // 3. 行内标记（均为单行模式，安全）
   text = text.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1"); // 图片 → alt
   text = text.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1"); // 链接 → 文本
-  text = text.replace(/`([^`]+)`/g, "$1"); // 行内代码
   text = text.replace(/(\*\*|__)(.*?)\1/g, "$2"); // 加粗
   text = text.replace(/(\*|_)(.*?)\1/g, "$2"); // 斜体
   text = text.replace(/~~(.*?)~~/g, "$1"); // 删除线
 
   // 4. 折叠多余空行并去首尾空白
-  return text.replace(/\n{3,}/g, "\n\n").trim();
+  const normalized = text.replace(/\n{3,}/g, "\n\n").trim();
+  return normalized.replace(
+    new RegExp(`${marker}(\\d+)\uE001`, "g"),
+    (_, index: string) => codeSegments[Number(index)]
+  );
 }
