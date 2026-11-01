@@ -102,6 +102,18 @@ async function readSseStream(
     dataLines = [];
   };
 
+  const processLine = (line: string) => {
+    if (!line) {
+      dispatchEvent();
+    } else if (line.startsWith(":")) {
+      return;
+    } else if (line.startsWith("event:")) {
+      eventName = line.slice(6).trim();
+    } else if (line.startsWith("data:")) {
+      dataLines.push(line.slice(5).trim());
+    }
+  };
+
   for (;;) {
     if (signal?.aborted) {
       reader.cancel();
@@ -109,6 +121,8 @@ async function readSseStream(
     }
     const { value, done } = await reader.read();
     if (done) {
+      buffer += decoder.decode();
+      if (buffer) processLine(buffer);
       dispatchEvent();
       break;
     }
@@ -116,20 +130,7 @@ async function readSseStream(
     const lines = buffer.split(/\r?\n/);
     buffer = lines.pop() ?? "";
     for (const line of lines) {
-      if (!line) {
-        dispatchEvent();
-        continue;
-      }
-      if (line.startsWith(":")) {
-        continue;
-      }
-      if (line.startsWith("event:")) {
-        eventName = line.slice(6).trim();
-        continue;
-      }
-      if (line.startsWith("data:")) {
-        dataLines.push(line.slice(5).trim());
-      }
+      processLine(line);
     }
   }
 }
