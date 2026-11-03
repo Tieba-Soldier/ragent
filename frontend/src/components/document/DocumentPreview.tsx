@@ -20,9 +20,16 @@ const PdfPreview = lazy(() =>
   import("@/components/document/PdfPreview").then((m) => ({ default: m.PdfPreview }))
 );
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
-
 const IMAGE_EXTS = ["png", "jpg", "jpeg", "svg", "gif", "webp", "bmp"];
+const IMAGE_MIME_TYPES: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  svg: "image/svg+xml",
+  gif: "image/gif",
+  webp: "image/webp",
+  bmp: "image/bmp"
+};
 
 export const isSpreadsheetType = (ext?: string | null) => {
   const e = (ext || "").toLowerCase();
@@ -35,10 +42,12 @@ export const isDocxType = (ext?: string | null) => (ext || "").toLowerCase() ===
 
 export const isPreviewableType = (ext?: string | null) => {
   const type = (ext || "").toLowerCase();
-  return ["pdf", "csv", "markdown", "txt"].includes(type)
-    || isDocxType(type)
-    || isSpreadsheetType(type)
-    || isImageType(type);
+  return (
+    ["pdf", "csv", "markdown", "txt"].includes(type) ||
+    isDocxType(type) ||
+    isSpreadsheetType(type) ||
+    isImageType(type)
+  );
 };
 
 // 剥离 markdown 头部的 front-matter，单独展示
@@ -60,7 +69,9 @@ interface DocumentPreviewProps {
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-1 items-center justify-center py-16 text-sm text-muted-foreground">{children}</div>
+    <div className="flex flex-1 items-center justify-center py-16 text-sm text-muted-foreground">
+      {children}
+    </div>
   );
 }
 
@@ -89,6 +100,52 @@ function DownloadFallback({ docId, docName, fileType }: DocumentPreviewProps) {
         <Download className="h-3.5 w-3.5" />
         下载原文件
       </button>
+    </div>
+  );
+}
+
+function ImagePreview({ docId, docName, fileType }: DocumentPreviewProps) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setImageUrl(null);
+    setStatus("loading");
+
+    (async () => {
+      try {
+        const buffer = await fetchDocumentFile(docId);
+        if (cancelled) return;
+        const mimeType =
+          IMAGE_MIME_TYPES[(fileType || "").toLowerCase()] || "application/octet-stream";
+        objectUrl = URL.createObjectURL(new Blob([buffer], { type: mimeType }));
+        setImageUrl(objectUrl);
+        setStatus("done");
+      } catch {
+        if (!cancelled) setStatus("error");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [docId, fileType]);
+
+  if (status === "loading") return <Centered>加载中…</Centered>;
+  if (status === "error" || !imageUrl) {
+    return <DownloadFallback docId={docId} docName={docName} fileType={fileType} />;
+  }
+  return (
+    <div className="flex flex-1 items-center justify-center overflow-auto bg-[#F7F7F8] p-4">
+      <img
+        className="max-h-full max-w-full object-contain"
+        src={imageUrl}
+        alt={docName || ""}
+        onError={() => setStatus("error")}
+      />
     </div>
   );
 }
@@ -139,8 +196,6 @@ export function DocumentPreview({ docId, fileType, docName }: DocumentPreviewPro
     };
   }, [docId, isCsv, isPlainText, needsText]);
 
-  const fileUrl = `${API_BASE_URL}/knowledge-base/docs/${docId}/file`;
-
   if (isPdf) {
     return (
       <Suspense fallback={<Centered>加载中…</Centered>}>
@@ -163,11 +218,7 @@ export function DocumentPreview({ docId, fileType, docName }: DocumentPreviewPro
     );
   }
   if (isImage) {
-    return (
-      <div className="flex flex-1 items-center justify-center overflow-auto bg-[#F7F7F8] p-4">
-        <img className="max-h-full max-w-full object-contain" src={fileUrl} alt={docName || ""} />
-      </div>
-    );
+    return <ImagePreview docId={docId} docName={docName} fileType={fileType} />;
   }
   if (!needsText) {
     return <DownloadFallback docId={docId} docName={docName} fileType={fileType} />;
@@ -181,7 +232,9 @@ export function DocumentPreview({ docId, fileType, docName }: DocumentPreviewPro
   if (isPlainText) {
     return (
       <div className="flex-1 overflow-auto px-6 py-4">
-        <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-6 text-foreground">{content}</pre>
+        <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-6 text-foreground">
+          {content}
+        </pre>
       </div>
     );
   }
