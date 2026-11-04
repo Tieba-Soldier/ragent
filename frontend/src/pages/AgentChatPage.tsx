@@ -21,6 +21,7 @@ export function AgentChatPage() {
     startNewChat
   } = useAgentChatStore();
   const [sessionsReady, setSessionsReady] = React.useState(false);
+  const [sessionsLoadSucceeded, setSessionsLoadSucceeded] = React.useState(false);
   const sessionExists = React.useMemo(() => {
     if (!sessionId) return false;
     return sessions.some((session) => session.id === sessionId);
@@ -28,13 +29,12 @@ export function AgentChatPage() {
 
   React.useEffect(() => {
     let active = true;
-    loadSessions()
-      .catch(() => null)
-      .finally(() => {
-        if (active) {
-          setSessionsReady(true);
-        }
-      });
+    loadSessions().then((loaded) => {
+      if (active) {
+        setSessionsLoadSucceeded(loaded);
+        setSessionsReady(true);
+      }
+    });
     return () => {
       active = false;
     };
@@ -42,7 +42,7 @@ export function AgentChatPage() {
 
   React.useEffect(() => {
     if (sessionId) {
-      if (sessionsReady && !sessionExists) {
+      if (sessionsReady && sessionsLoadSucceeded && !sessionExists) {
         startNewChat();
         navigate("/chat", { replace: true });
         return;
@@ -63,6 +63,7 @@ export function AgentChatPage() {
   }, [
     sessionId,
     sessionsReady,
+    sessionsLoadSucceeded,
     sessionExists,
     isCreatingNew,
     currentSessionId,

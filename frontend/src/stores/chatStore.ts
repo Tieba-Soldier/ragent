@@ -42,7 +42,7 @@ interface ChatState {
   openedSourceMessageId: string | null;
   // 展开推荐面板后需滚入视口的消息；每次请求都是新对象，供 MessageList 一次性响应
   recommendReveal: { id: string } | null;
-  fetchSessions: () => Promise<void>;
+  fetchSessions: () => Promise<boolean>;
   createSession: () => Promise<string>;
   deleteSession: (sessionId: string) => Promise<void>;
   renameSession: (sessionId: string, title: string) => Promise<void>;
@@ -123,8 +123,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
           return timeB - timeA;
         });
       set({ sessions });
+      return true;
     } catch (error) {
       toast.error((error as Error).message || "加载会话失败");
+      return false;
     } finally {
       set({ isLoading: false, sessionsLoaded: true });
     }

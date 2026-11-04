@@ -23,6 +23,7 @@ export function ChatPage() {
   } = useChatStore();
   const showWelcome = messages.length === 0 && !isLoading;
   const [sessionsReady, setSessionsReady] = React.useState(false);
+  const [sessionsLoadSucceeded, setSessionsLoadSucceeded] = React.useState(false);
   const sessionExists = React.useMemo(() => {
     if (!sessionId) return false;
     return sessions.some((session) => session.id === sessionId);
@@ -30,13 +31,12 @@ export function ChatPage() {
 
   React.useEffect(() => {
     let active = true;
-    fetchSessions()
-      .catch(() => null)
-      .finally(() => {
-        if (active) {
-          setSessionsReady(true);
-        }
-      });
+    fetchSessions().then((loaded) => {
+      if (active) {
+        setSessionsLoadSucceeded(loaded);
+        setSessionsReady(true);
+      }
+    });
     return () => {
       active = false;
     };
@@ -44,7 +44,7 @@ export function ChatPage() {
 
   React.useEffect(() => {
     if (sessionId) {
-      if (sessionsReady && !sessionExists) {
+      if (sessionsReady && sessionsLoadSucceeded && !sessionExists) {
         createSession().catch(() => null);
         navigate("/chat", { replace: true });
         return;
@@ -65,6 +65,7 @@ export function ChatPage() {
   }, [
     sessionId,
     sessionsReady,
+    sessionsLoadSucceeded,
     sessionExists,
     isCreatingNew,
     currentSessionId,
