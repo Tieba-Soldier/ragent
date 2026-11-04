@@ -44,7 +44,7 @@ interface AgentChatState {
   cancelRequested: boolean;
   // 原始帧抽屉：本次连接收到的全部 SSE 帧 换会话即清
   frames: AgentRawFrame[];
-  loadSessions: () => Promise<void>;
+  loadSessions: () => Promise<boolean>;
   loadMessages: (sessionId: string) => Promise<void>;
   renameSession: (sessionId: string, title: string) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
@@ -208,8 +208,10 @@ export const useAgentChatStore = create<AgentChatState>((set, get) => {
             return timeB - timeA;
           });
         set({ sessions });
+        return true;
       } catch (error) {
         toast.error((error as Error).message || "加载会话失败");
+        return false;
       } finally {
         set({ isLoading: false, sessionsLoaded: true });
       }
