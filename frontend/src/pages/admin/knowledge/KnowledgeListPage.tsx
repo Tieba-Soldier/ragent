@@ -146,12 +146,10 @@ export function KnowledgeListPage() {
 
   useEffect(() => {
     const trimmed = nameFromQuery.trim();
-    if (trimmed !== keyword) {
-      setSearchName(trimmed);
-      setKeyword(trimmed);
-      setPageNo(1);
-    }
-  }, [nameFromQuery, keyword]);
+    setSearchName(trimmed);
+    setKeyword(trimmed);
+    setPageNo(1);
+  }, [nameFromQuery]);
 
   useEffect(() => {
     if (renameDialog.open) {
