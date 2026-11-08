@@ -388,6 +388,7 @@ export function KnowledgeDocumentsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchOperating, setBatchOperating] = useState(false);
   const [batchDeleteOpen, setBatchDeleteOpen] = useState(false);
+  const selectedOnPageIds = documents.map((doc) => String(doc.id)).filter((id) => selectedIds.has(id));
 
   useEffect(() => {
     getIngestionPipelines(1, 200).then(r => {
@@ -409,7 +410,7 @@ export function KnowledgeDocumentsPage() {
 
   const toggleSelectAll = () => {
     if (documents.length === 0) return;
-    if (selectedIds.size === documents.length) {
+    if (selectedOnPageIds.length === documents.length) {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(documents.map((d) => String(d.id))));
@@ -417,11 +418,12 @@ export function KnowledgeDocumentsPage() {
   };
 
   const handleBatchChunk = async () => {
-    if (selectedIds.size === 0) return;
+    const ids = selectedOnPageIds;
+    if (ids.length === 0) return;
     setBatchOperating(true);
     let done = 0;
     try {
-      for (const id of selectedIds) {
+      for (const id of ids) {
         await startDocumentChunk(id);
         done++;
       }
@@ -429,18 +431,19 @@ export function KnowledgeDocumentsPage() {
       setSelectedIds(new Set());
       await loadDocuments(current, statusFilter, keyword);
     } catch (error) {
-      toast.error(getErrorMessage(error, `已处理 ${done}/${selectedIds.size}，操作中断`));
+      toast.error(getErrorMessage(error, `已处理 ${done}/${ids.length}，操作中断`));
     } finally {
       setBatchOperating(false);
     }
   };
 
   const handleBatchDelete = async () => {
-    if (selectedIds.size === 0) return;
+    const ids = selectedOnPageIds;
+    if (ids.length === 0) return;
     setBatchOperating(true);
     let done = 0;
     try {
-      for (const id of selectedIds) {
+      for (const id of ids) {
         await deleteDocument(id);
         done++;
       }
@@ -449,7 +452,7 @@ export function KnowledgeDocumentsPage() {
       setCurrent(1);
       await loadDocuments(1, statusFilter, keyword);
     } catch (error) {
-      toast.error(getErrorMessage(error, `已处理 ${done}/${selectedIds.size}，操作中断`));
+      toast.error(getErrorMessage(error, `已处理 ${done}/${ids.length}，操作中断`));
     } finally {
       setBatchOperating(false);
     }
@@ -468,6 +471,7 @@ export function KnowledgeDocumentsPage() {
 
   const loadDocuments = useCallback(async (page = current, status = statusFilter, keywordValue = keyword) => {
     if (!kbId) return;
+    setSelectedIds(new Set());
     setLoading(true);
     try {
       const data = await getDocumentsPage(kbId, {
@@ -803,7 +807,7 @@ export function KnowledgeDocumentsPage() {
                   <TableRow>
                     <TableHead className="w-[40px]">
                       <Checkbox
-                        checked={documents.length > 0 && selectedIds.size === documents.length}
+                        checked={documents.length > 0 && selectedOnPageIds.length === documents.length}
                         onCheckedChange={toggleSelectAll}
                       />
                     </TableHead>
@@ -1027,7 +1031,7 @@ export function KnowledgeDocumentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>确认批量删除？</AlertDialogTitle>
             <AlertDialogDescription>
-              将删除选中的 {selectedIds.size} 个文档，且向量数据会清理。
+              将删除选中的 {selectedOnPageIds.length} 个文档，且向量数据会清理。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1039,7 +1043,7 @@ export function KnowledgeDocumentsPage() {
               }}
               className="bg-destructive text-destructive-foreground"
             >
-              删除 {selectedIds.size} 个文档
+              删除 {selectedOnPageIds.length} 个文档
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1373,13 +1377,13 @@ export function KnowledgeDocumentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {selectedIds.size > 0 && (
+      {selectedOnPageIds.length > 0 && !loading && (
         <div className="fixed inset-x-0 bottom-6 z-50 flex justify-center">
           <div className="animate-fade-up rounded-2xl bg-slate-900 px-5 py-3 text-sm text-white shadow-[0_10px_40px_rgba(0,0,0,0.15)]">
             <div className="flex items-center gap-3">
               <Check className="h-4 w-4 text-emerald-400" />
               <span className="tabular-nums font-medium">
-                已选 {selectedIds.size} 项
+                已选 {selectedOnPageIds.length} 项
               </span>
               <div className="mx-1 h-5 w-px bg-white/20" />
               <button
