@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -56,17 +56,21 @@ export function SampleQuestionPage() {
     item: SampleQuestion | null;
   }>({ open: false, mode: "create", item: null });
   const [form, setForm] = useState(emptyForm);
+  const requestIdRef = useRef(0);
 
   const loadQuestions = useCallback(async (current = pageNo, keywordValue = keyword) => {
+    const requestId = ++requestIdRef.current;
     try {
       setLoading(true);
       const data = await getSampleQuestionsPage(current, PAGE_SIZE, keywordValue || undefined);
-      setPageData(data);
+      if (requestIdRef.current === requestId) setPageData(data);
     } catch (error) {
-      toast.error(getErrorMessage(error, "加载示例问题失败"));
-      console.error(error);
+      if (requestIdRef.current === requestId) {
+        toast.error(getErrorMessage(error, "加载示例问题失败"));
+        console.error(error);
+      }
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [keyword, pageNo]);
 
