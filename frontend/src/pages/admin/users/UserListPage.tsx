@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pencil, Plus, RefreshCw, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,19 +43,23 @@ export function UserListPage() {
     user: null
   });
   const [form, setForm] = useState(buildEmptyForm());
+  const requestIdRef = useRef(0);
 
   const users = pageData?.records || [];
 
   const loadUsers = useCallback(async (current = pageNo, name = keyword) => {
+    const requestId = ++requestIdRef.current;
     try {
       setLoading(true);
       const data = await getUsersPage(current, PAGE_SIZE, name || undefined);
-      setPageData(data);
+      if (requestIdRef.current === requestId) setPageData(data);
     } catch (error) {
-      toast.error(getErrorMessage(error, "加载用户列表失败"));
-      console.error(error);
+      if (requestIdRef.current === requestId) {
+        toast.error(getErrorMessage(error, "加载用户列表失败"));
+        console.error(error);
+      }
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [keyword, pageNo]);
 
