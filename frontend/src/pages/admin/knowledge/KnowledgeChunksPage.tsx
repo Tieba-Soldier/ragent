@@ -56,7 +56,10 @@ export function KnowledgeChunksPage() {
   const [deleteTarget, setDeleteTarget] = useState<KnowledgeChunk | null>(null);
   const chunks = pageData?.records || [];
 
-  const selectedList = useMemo(() => Array.from(selectedIds), [selectedIds]);
+  const selectedList = useMemo(
+    () => (pageData?.records || []).map((chunk) => String(chunk.id)).filter((id) => selectedIds.has(id)),
+    [pageData, selectedIds]
+  );
 
   const loadDocument = useCallback(async () => {
     if (!docId) return;
@@ -71,6 +74,7 @@ export function KnowledgeChunksPage() {
 
   const loadChunks = useCallback(async (current = pageNo, enabled = enabledFilter) => {
     if (!docId) return;
+    setSelectedIds(new Set());
     setLoading(true);
     try {
       const data = await getChunksPage(docId, {
@@ -112,7 +116,7 @@ export function KnowledgeChunksPage() {
       setSelectedIds(new Set());
       return;
     }
-    const next = new Set(selectedIds);
+    const next = new Set<string>();
     chunks.forEach((chunk) => next.add(String(chunk.id)));
     setSelectedIds(next);
   };
@@ -233,11 +237,11 @@ export function KnowledgeChunksPage() {
                 <RefreshCw className="mr-2 h-4 w-4" />
                 刷新
               </Button>
-              <Button variant="outline" onClick={() => handleBatchToggle(true)} disabled={selectedList.length === 0}>
+              <Button variant="outline" onClick={() => handleBatchToggle(true)} disabled={loading || selectedList.length === 0}>
                 <ShieldCheck className="mr-2 h-4 w-4" />
                 批量启用
               </Button>
-              <Button variant="outline" onClick={() => handleBatchToggle(false)} disabled={selectedList.length === 0}>
+              <Button variant="outline" onClick={() => handleBatchToggle(false)} disabled={loading || selectedList.length === 0}>
                 <ShieldX className="mr-2 h-4 w-4" />
                 批量禁用
               </Button>
