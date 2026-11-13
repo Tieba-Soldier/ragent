@@ -52,6 +52,7 @@ import {
   type PageResult
 } from "@/services/bizChangeLogService";
 import { getErrorMessage } from "@/utils/error";
+import { getDefaultBizChangeLogDateRange } from "./dateRange";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 const ALL_VALUE = "__all__";
@@ -60,25 +61,13 @@ const FILTER_SELECT_TRIGGER_CLASS =
   "h-10 border-slate-200 text-sm focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=open]:border-slate-200 data-[state=open]:ring-0";
 const FILTER_INPUT_CLASS = "h-10 border-slate-200 text-sm focus-visible:border-slate-200 focus-visible:ring-0 focus-visible:ring-offset-0";
 
-const pad2 = (value: number) => String(value).padStart(2, "0");
-
-const toDateInput = (date: Date) => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-
-// 默认查询最近一个月的数据
-const defaultDateRange = () => {
-  const end = new Date();
-  const begin = new Date();
-  begin.setMonth(begin.getMonth() - 1);
-  return { beginTime: toDateInput(begin), endTime: toDateInput(end) };
-};
-
 const createDefaultFilters = () => ({
   bizType: "",
   operationType: "",
   success: "",
   bizId: "",
   operatorName: "",
-  ...defaultDateRange()
+  ...getDefaultBizChangeLogDateRange()
 });
 
 const SUCCESS_OPTIONS = [
