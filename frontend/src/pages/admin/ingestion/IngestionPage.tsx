@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   ClipboardList,
@@ -215,6 +215,7 @@ export function IngestionPage() {
   const [pipelineSearch, setPipelineSearch] = useState("");
   const [pipelinePageNo, setPipelinePageNo] = useState(1);
   const [pipelineLoading, setPipelineLoading] = useState(false);
+  const pipelineRequestRef = useRef(0);
   const [pipelineDialog, setPipelineDialog] = useState<{
     open: boolean;
     mode: "create" | "edit";
@@ -232,6 +233,7 @@ export function IngestionPage() {
   const [taskStatus, setTaskStatus] = useState<string | undefined>();
   const [taskPageNo, setTaskPageNo] = useState(1);
   const [taskLoading, setTaskLoading] = useState(false);
+  const taskRequestRef = useRef(0);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [taskDetail, setTaskDetail] = useState<{ open: boolean; taskId: string | null }>({
@@ -243,15 +245,18 @@ export function IngestionPage() {
   const tasks = taskPage?.records || [];
 
   const loadPipelines = useCallback(async (pageNo = pipelinePageNo, keyword = pipelineKeyword) => {
+    const requestId = ++pipelineRequestRef.current;
     setPipelineLoading(true);
     try {
       const data = await getIngestionPipelines(pageNo, PIPELINE_PAGE_SIZE, keyword || undefined);
+      if (pipelineRequestRef.current !== requestId) return;
       setPipelinePage(data);
     } catch (error) {
+      if (pipelineRequestRef.current !== requestId) return;
       toast.error(getErrorMessage(error, "加载流水线失败"));
       console.error(error);
     } finally {
-      setPipelineLoading(false);
+      if (pipelineRequestRef.current === requestId) setPipelineLoading(false);
     }
   }, [pipelineKeyword, pipelinePageNo]);
 
@@ -265,15 +270,18 @@ export function IngestionPage() {
   };
 
   const loadTasks = useCallback(async (pageNo = taskPageNo, status = taskStatus) => {
+    const requestId = ++taskRequestRef.current;
     setTaskLoading(true);
     try {
       const data = await getIngestionTasks(pageNo, TASK_PAGE_SIZE, status);
+      if (taskRequestRef.current !== requestId) return;
       setTaskPage(data);
     } catch (error) {
+      if (taskRequestRef.current !== requestId) return;
       toast.error(getErrorMessage(error, "加载任务失败"));
       console.error(error);
     } finally {
-      setTaskLoading(false);
+      if (taskRequestRef.current === requestId) setTaskLoading(false);
     }
   }, [taskPageNo, taskStatus]);
 
