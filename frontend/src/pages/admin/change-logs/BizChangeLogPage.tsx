@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Boxes,
   Check,
@@ -423,6 +423,8 @@ function ContextPanel({ detail }: { detail: BizChangeLog | null }) {
 }
 
 export function BizChangeLogPage() {
+  const listRequestRef = useRef(0);
+  const detailRequestRef = useRef(0);
   const [pageNo, setPageNo] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
   const [pageData, setPageData] = useState<PageResult<BizChangeLog> | null>(null);
@@ -442,6 +444,7 @@ export function BizChangeLogPage() {
   const rangeEnd = total === 0 ? 0 : Math.min((current - 1) * pageSize + records.length, total);
 
   const loadData = useCallback(async (currentPage = pageNo, nextQuery = query, size = pageSize) => {
+    const requestId = ++listRequestRef.current;
     try {
       setLoading(true);
       const result = await getBizChangeLogsPage({
@@ -455,12 +458,13 @@ export function BizChangeLogPage() {
         beginTime: nextQuery.beginTime ? `${nextQuery.beginTime} 00:00:00` : undefined,
         endTime: nextQuery.endTime ? `${nextQuery.endTime} 23:59:59` : undefined
       });
-      setPageData(result);
+      if (listRequestRef.current === requestId) setPageData(result);
     } catch (error) {
+      if (listRequestRef.current !== requestId) return;
       toast.error(getErrorMessage(error, "加载变更审计日志失败"));
       console.error(error);
     } finally {
-      setLoading(false);
+      if (listRequestRef.current === requestId) setLoading(false);
     }
   }, [pageNo, pageSize, query]);
 
@@ -481,17 +485,20 @@ export function BizChangeLogPage() {
   };
 
   const handleOpenDetail = async (id: string, initialTab: DetailTab = "diff") => {
+    const requestId = ++detailRequestRef.current;
     setDetailOpen(true);
     setDetailTab(initialTab);
     setDetail(null);
     try {
       setDetailLoading(true);
-      setDetail(await getBizChangeLog(id));
+      const result = await getBizChangeLog(id);
+      if (detailRequestRef.current === requestId) setDetail(result);
     } catch (error) {
+      if (detailRequestRef.current !== requestId) return;
       toast.error(getErrorMessage(error, "加载审计详情失败"));
       console.error(error);
     } finally {
-      setDetailLoading(false);
+      if (detailRequestRef.current === requestId) setDetailLoading(false);
     }
   };
 
