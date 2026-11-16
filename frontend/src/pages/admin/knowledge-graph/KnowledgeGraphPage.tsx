@@ -1039,6 +1039,7 @@ export function KnowledgeGraphPage() {
   const [activeDoc, setActiveDoc] = useState<KnowledgeDocument | null>(null);
   // 当前范围（collection/doc），用 ref 保存以免 setState 同一 tick 过期，loadGraph 从此读取
   const scopeRef = useRef<{ collection?: string; doc?: string }>({});
+  const graphRequestRef = useRef(0);
 
   // 渲染图谱：每次加载重建实例，规避样式回调闭包过期
   const renderGraph = useCallback((data: GraphView) => {
@@ -1377,6 +1378,7 @@ export function KnowledgeGraphPage() {
 
   const loadGraph = useCallback(
     async (entity?: string, overrides?: { depth?: number; limit?: number }) => {
+      const requestId = ++graphRequestRef.current;
       setLoading(true);
       setErrorMsg(null);
       try {
@@ -1387,12 +1389,14 @@ export function KnowledgeGraphPage() {
           depth: overrides?.depth ?? Number(depth),
           limit: overrides?.limit ?? Number(limit)
         });
+        if (graphRequestRef.current !== requestId) return;
         setView(result);
         setActiveEntity(entity || "");
         setFocusName("");
         focusedIdRef.current = "";
         renderGraph(result);
       } catch (error) {
+        if (graphRequestRef.current !== requestId) return;
         const message = getErrorMessage(error, "加载图谱失败");
         setErrorMsg(message);
         setView(null);
@@ -1403,7 +1407,9 @@ export function KnowledgeGraphPage() {
         graphRef.current?.destroy();
         graphRef.current = null;
       } finally {
-        setLoading(false);
+        if (graphRequestRef.current === requestId) {
+          setLoading(false);
+        }
       }
     },
     [depth, limit, renderGraph]
@@ -1413,6 +1419,7 @@ export function KnowledgeGraphPage() {
   useEffect(() => {
     void loadGraph();
     return () => {
+      graphRequestRef.current += 1;
       stopEdgeFlow();
       stopEntrance();
       stopAmbient();
