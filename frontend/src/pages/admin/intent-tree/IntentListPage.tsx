@@ -44,6 +44,7 @@ import {
 } from "@/services/intentTreeService";
 import { getKnowledgeBases } from "@/services/knowledgeService";
 import { getErrorMessage } from "@/utils/error";
+import { getSelectedVisibleRows } from "./selection";
 
 const ALL_VALUE = "__ALL__";
 const ROOT_VALUE = "__ROOT__";
@@ -181,6 +182,7 @@ export function IntentListPage() {
   const loadIntentTree = async () => {
     try {
       setLoading(true);
+      setSelectedIds([]);
       const data = await getIntentTree();
       setTree(data || []);
     } catch (error) {
@@ -258,7 +260,7 @@ export function IntentListPage() {
   const startIndex = (currentPage - 1) * pageSize;
   const pageRows = filteredRows.slice(startIndex, startIndex + pageSize);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const selectedRows = useMemo(() => rows.filter((row) => selectedIdSet.has(row.id)), [rows, selectedIdSet]);
+  const selectedRows = getSelectedVisibleRows(pageRows, selectedIdSet);
   const pageRowIds = useMemo(() => pageRows.map((row) => row.id), [pageRows]);
   const allPageSelected =
     pageRowIds.length > 0 && pageRowIds.every((id) => selectedIdSet.has(id));
@@ -361,7 +363,7 @@ export function IntentListPage() {
 
   const rangeStart = total === 0 ? 0 : startIndex + 1;
   const rangeEnd = total === 0 ? 0 : Math.min(startIndex + pageRows.length, total);
-  const isBatchDisabled = Boolean(batchSubmitting);
+  const isBatchDisabled = loading || Boolean(batchSubmitting);
   const showPagination = !loading && total > 0;
 
   return (
