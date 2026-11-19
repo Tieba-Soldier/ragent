@@ -22,6 +22,8 @@ api.interceptors.request.use((config) => {
   const token = storage.getToken();
   if (token) {
     config.headers.Authorization = token;
+  } else {
+    delete config.headers.Authorization;
   }
   return config;
 });
@@ -35,6 +37,7 @@ api.interceptors.response.use(
         const isAuthExpired = typeof message === "string" && message.includes("未登录");
         if (isAuthExpired) {
           storage.clearAuth();
+          setAuthToken(null);
           if (window.location.pathname !== "/login") {
             window.location.href = "/login";
           }
@@ -48,6 +51,7 @@ api.interceptors.response.use(
   (error) => {
     if (error?.response?.status === 401) {
       storage.clearAuth();
+      setAuthToken(null);
       if (window.location.pathname !== "/login") {
         window.location.href = "/login";
       }
