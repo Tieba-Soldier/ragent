@@ -62,6 +62,7 @@ import {
   updateIntentNode
 } from "@/services/intentTreeService";
 import { KnowledgeBaseMultiSelect } from "./KnowledgeBaseMultiSelect";
+import { collectDescendantIntentCodes } from "./parentOptions";
 
 const ROOT_PARENT = "__ROOT__";
 
@@ -593,8 +594,8 @@ function IntentNodeDialog({
   }, [open, resolvedDefaults, form]);
 
   const parentOptions = useMemo(() => {
-    const filtered =
-        mode === "edit" && node ? treeOptions.filter((item) => item.value !== node.intentCode) : treeOptions;
+    const excludedCodes = mode === "edit" && node ? collectDescendantIntentCodes(node) : new Set<string>();
+    const filtered = treeOptions.filter((item) => !excludedCodes.has(item.value));
     const rootOption: TreeOption = { label: "ROOT", value: ROOT_PARENT, node: null, depth: 0 };
     return [rootOption, ...filtered];
   }, [mode, node, treeOptions]);
